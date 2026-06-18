@@ -1,0 +1,25 @@
+<script type="module">
+  // Firebase SDK 読み込み
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getDatabase, ref, push, onChildAdded, set, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "あなたのAPIキー",
+    authDomain: "あなたのドメイン",
+    databaseURL: "あなたのDB URL",
+    projectId: "あなたのID",
+    storageBucket: "あなたのバケット",
+    messagingSenderId: "番号",
+    appId: "アプリID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  // 匿名ログイン
+  signInAnonymously(auth).then(() => {
+    console.log("ログイン成功");
+  });
+</script>
