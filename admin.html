@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>管理者ダッシュボード</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #adminPanel {
+    padding: 20px;
+  }
+  .section {
+    margin-bottom: 30px;
+    padding: 15px;
+    background: #111122;
+    border: 1px solid #333355;
+    border-radius: 6px;
+  }
+  input, textarea {
+    width: 100%;
+    padding: 8px;
+    background: #222233;
+    border: none;
+    color: #fff;
+    margin-top: 5px;
+  }
+  button {
+    margin-top: 10px;
+  }
+  #logList {
+    max-height: 50vh;
+    overflow-y: auto;
+    background: #0f0f18;
+    padding: 10px;
+  }
+  .logItem {
+    padding: 8px;
+    background: #1a1a2a;
+    margin-bottom: 8px;
+    border-left: 3px solid #5566ff;
+  }
+</style>
+</head>
+<body>
+
+<div id="header">管理者ダッシュボード</div>
+
+<div id="adminPanel" style="display:none;">
+
+  <!-- 🔥 ログ検索 -->
+  <div class="section">
+    <h2>ログ検索</h2>
+    <label>部屋選択：</label>
+    <select id="roomSelect">
+      <option value="open">オープン部屋</option>
+      <option value="close">クローズ部屋</option>
+    </select>
+
+    <label>キーワード検索：</label>
+    <input id="keyword" type="text" placeholder="例：学校、悩み、助けて">
+
+    <button id="searchBtn">検索</button>
+
+    <div id="logList"></div>
+  </div>
+
+  <!-- 🔥 NGワード編集 -->
+  <div class="section">
+    <h2>NGワード編集</h2>
+    <textarea id="ngwordsBox" rows="5"></textarea>
+    <button id="saveNgwords">保存</button>
+  </div>
+
+  <!-- 🔥 フィルターON/OFF -->
+  <div class="section">
+    <h2>NGフィルター設定</h2>
+    <button id="filterOn">フィルターON</button>
+    <button id="filterOff">フィルターOFF</button>
+  </div>
+
+  <!-- 🔥 BAN機能 -->
+  <div class="section">
+    <h2>ユーザーBAN</h2>
+    <input id="banUid" type="text" placeholder="BANしたいユーザーのUID">
+    <button id="banBtn">BANする</button>
+  </div>
+
+</div>
+
+<script type="module">
+  import { app, auth, db, initAuth } from "./chat-core.js";
+  import { ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  /* ============================
+     ★ 管理者UIDをここに書く
+  ============================ */
+  const ADMIN_UID = "あなたのUIDをここに貼る";
+
+  /* ============================
+     管理者チェック
+  ============================ */
+  initAuth(() => {
+    if (auth.currentUser.uid !== ADMIN_UID) {
+      alert("管理者専用ページです");
+      location.href = "open.html";
+      return;
+    }
+    document.getElementById("adminPanel").style.display = "block";
+    loadNgwords();
+  });
+
+  /* ============================
+     🔥 ログ検索
+  ============================ */
+  document.getElementById("searchBtn").onclick = async () => {
+    const room = roomSelect.value;
+    const keyword = keyword.value;
+
+    const snap = await get(ref(db, `messages/${room}`));
+    const logs = snap.val() || {};
+
+    const list = document.getElementById("logList");
+    list.innerHTML = "";
+
+    Object.values(logs).forEach(msg => {
+      if (msg.text.includes(keyword)) {
+        const div = document.createElement("div");
+        div.className = "logItem";
+        div.innerHTML = `
+          <b>${msg.uid}</b><br>
+          ${msg.text}<br>
+          <small>${new Date(msg.time).toLocaleString()}</small>
+        `;
+        list.appendChild(div);
+      }
+    });
+  };
+
+  /* ============================
+     🔥 NGワード読み込み
+  ============================ */
+  function loadNgwords() {
+    onValue(ref(db, "ngwords/list"), (snap) => {
+      const arr = snap.val() || [];
+      ngwordsBox.value = arr.join("\n");
+    });
+  }
+
+  /* ============================
+     🔥 NGワード保存
+  ============================ */
+  saveNgwords.onclick = () => {
+    const arr = ngwordsBox.value.split("\n").map(v => v.trim()).filter(v => v);
+    set(ref(db, "ngwords/list"), arr);
+    alert("保存しました");
+  };
+
+  /* ============================
+     🔥 フィルターON/OFF
+  ============================ */
+  filterOn.onclick = () => {
+    set(ref(db, "settings/filterEnabled"), true);
+    alert("フィルターONにしました");
+  };
+
+  filterOff.onclick = () => {
+    set(ref(db, "settings/filterEnabled"), false);
+    alert("フィルターOFFにしました");
+  };
+
+  /* ============================
+     🔥 BAN機能
+  ============================ */
+  banBtn.onclick = () => {
+    const id = banUid.value.trim();
+    if (!id) return alert("UIDを入力してください");
+    set(ref(db, `bans/${id}`), true);
+    alert("BANしました");
+  };
+</script>
+
+</body>
+</html>
